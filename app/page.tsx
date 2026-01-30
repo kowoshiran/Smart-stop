@@ -10,6 +10,7 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false)
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false)
 
   useEffect(() => {
     // Détecter si l'app est installée (mode standalone)
@@ -28,8 +29,17 @@ export default function Home() {
       return mobile
     }
 
+    // Détecter si on est dans un navigateur intégré (Facebook, Messenger, Instagram, etc.)
+    const checkInAppBrowser = () => {
+      const ua = navigator.userAgent || navigator.vendor
+      const isInApp = /FBAN|FBAV|Instagram|Messenger|Line|WhatsApp|Twitter/i.test(ua)
+      setIsInAppBrowser(isInApp)
+      return isInApp
+    }
+
     const installed = checkInstalled()
     const mobile = checkMobile()
+    const inAppBrowser = checkInAppBrowser()
 
     // Si l'app est installée OU qu'on est sur desktop, continuer normalement
     if (installed || !mobile) {
@@ -104,7 +114,33 @@ export default function Home() {
               Tu pourras l'utiliser comme une vraie app, même hors ligne.
             </p>
 
-            {deferredPrompt ? (
+            {isInAppBrowser ? (
+              <div className="text-left space-y-4 text-purple-200">
+                <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-xl p-4 mb-4">
+                  <p className="text-yellow-200 font-semibold mb-2">⚠️ Navigateur non compatible</p>
+                  <p className="text-yellow-100 text-sm">
+                    Tu es dans un navigateur intégré (Messenger, Facebook, Instagram...).
+                    Pour installer l'app, il faut ouvrir ce lien dans Chrome.
+                  </p>
+                </div>
+
+                <p className="font-semibold text-white">Comment ouvrir dans Chrome :</p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">1️⃣</span>
+                    <p>Appuie sur <strong>⋮</strong> ou <strong>···</strong> (menu en haut à droite)</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">2️⃣</span>
+                    <p>Sélectionne <strong>"Ouvrir dans Chrome"</strong> ou <strong>"Ouvrir dans le navigateur"</strong></p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">3️⃣</span>
+                    <p>Une fois dans Chrome, tu verras un bouton <strong>"Installer"</strong></p>
+                  </div>
+                </div>
+              </div>
+            ) : deferredPrompt ? (
               <button
                 onClick={handleInstallClick}
                 className="w-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white py-4 rounded-xl font-bold text-lg hover:from-purple-600 hover:to-cyan-600 transition-all hover:scale-105 shadow-lg mb-4"
