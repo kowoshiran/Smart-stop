@@ -65,11 +65,11 @@ export default function SignUpPage() {
         }
       }
 
-      setMessage('Compte créé ! Redirection vers l\'onboarding...')
+      setMessage('Compte créé ! 📧 Vérifie ta boîte email (et les spams !) pour confirmer ton inscription.')
 
       setTimeout(() => {
-        router.push('/onboarding')
-      }, 1500)
+        router.push('/login')
+      }, 4000)
 
     } catch (error) {
       setError(error.message)
@@ -140,6 +140,10 @@ export default function SignUpPage() {
               className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-purple-300/50 focus:outline-none focus:border-cyan-500 transition"
               placeholder="••••••••"
             />
+          </div>
+
+          <div className="bg-cyan-500/10 border border-cyan-500/30 text-cyan-200 px-4 py-3 rounded-xl text-sm">
+            💡 Après inscription, vérifie ta boîte email (et les spams) pour confirmer ton compte.
           </div>
 
           {error && (
