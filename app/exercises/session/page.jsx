@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/Lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { checkAndUnlockBadges } from '@/Lib/badgeUtils'
 
-export default function SessionPage() {
+function SessionContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const cardIds = searchParams.get('cards')?.split(',') || []
@@ -38,8 +38,6 @@ export default function SessionPage() {
           return
         }
 
-        console.log('Chargement des cartes avec IDs:', cardIds)
-
         // Récupérer les cartes sélectionnées
         const { data: cardsData, error: cardsError } = await supabase
           .from('exercise_cards')
@@ -53,7 +51,6 @@ export default function SessionPage() {
           return
         }
 
-        console.log('Cartes chargées:', cardsData)
         setCards(cardsData || [])
 
         // Initialiser le timer avec la première carte
@@ -385,5 +382,17 @@ export default function SessionPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function SessionPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+        <div className="text-xl text-purple-300 animate-pulse">Chargement...</div>
+      </div>
+    }>
+      <SessionContent />
+    </Suspense>
   )
 }

@@ -125,7 +125,6 @@ export default function TrackerPage() {
             entryError.code === 'PGRST204'
           )) {
             // Erreur de cache du schéma - utiliser les valeurs par défaut
-            console.log('Cache du schéma en cours de rafraîchissement, utilisation des valeurs par défaut')
             setFormData(prev => ({ ...prev, trackingType: defaultType }))
           } else {
             // Pas d'entrée existante, définir le type par défaut
@@ -133,7 +132,6 @@ export default function TrackerPage() {
           }
         } catch (error) {
           // Erreur inattendue - utiliser les valeurs par défaut
-          console.log('Erreur lors du chargement de l\'entrée du jour, utilisation des valeurs par défaut')
           setFormData(prev => ({ ...prev, trackingType: defaultType }))
         }
 
@@ -251,8 +249,6 @@ export default function TrackerPage() {
         }
         throw error
       }
-
-      console.log('Entrée sauvegardée:', data)
 
       // Vérifier et débloquer les badges
       const newBadges = await checkAndUnlockBadges(user.id)

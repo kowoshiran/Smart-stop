@@ -754,12 +754,10 @@ export default function DashboardPage() {
         const { data: { user }, error: userError } = await supabase.auth.getUser()
 
         if (userError || !user) {
-          console.log('Pas d\'utilisateur connecté, redirection vers login')
           router.push('/login')
           return
         }
 
-        console.log('Utilisateur connecté:', user.id)
         setUser(user)
 
         // Vérifier si le profil existe et est complet
@@ -772,16 +770,12 @@ export default function DashboardPage() {
         if (profileError) {
           console.error('Erreur lors de la récupération du profil:', profileError)
           if (profileError.code === 'PGRST116') {
-            console.log('Profil non trouvé, redirection vers onboarding')
             router.push('/onboarding')
             return
           }
         }
 
-        console.log('Profil récupéré:', profileData)
-
         if (profileData && !profileData.onboarding_completed) {
-          console.log('Onboarding non complété, redirection')
           router.push('/onboarding')
           return
         }
@@ -826,7 +820,6 @@ export default function DashboardPage() {
           entriesError.message?.includes('tracking_type') ||
           entriesError.code === 'PGRST204'
         )) {
-          console.log('Cache du schéma Supabase en cours de rafraîchissement...')
           isSchemaError = true
           setIsSchemaLoading(true)
 

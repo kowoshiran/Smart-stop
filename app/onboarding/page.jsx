@@ -87,10 +87,8 @@ export default function OnboardingPage() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        console.log('Pas d\'utilisateur, redirection vers login')
         router.push('/login')
       } else {
-        console.log('Utilisateur trouvé pour onboarding:', user.id)
         setUser(user)
       }
       setLoading(false)
@@ -202,8 +200,6 @@ export default function OnboardingPage() {
         updated_at: new Date().toISOString(),
       }
 
-      console.log('Sauvegarde du profil:', profileData)
-
       // Utiliser upsert pour créer ou mettre à jour le profil
       const { data, error } = await supabase
         .from('profiles')
@@ -221,10 +217,7 @@ export default function OnboardingPage() {
         throw error
       }
 
-      console.log('Profil sauvegardé avec succès:', data)
-
       // Redirection vers le dashboard
-      console.log('Redirection vers le dashboard')
       router.push('/dashboard')
     } catch (error) {
       console.error('Erreur lors de la sauvegarde complète:', {
