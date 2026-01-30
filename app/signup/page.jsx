@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { supabase } from '@/Lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import InstallPrompt from '@/components/InstallPrompt'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -138,6 +139,8 @@ export default function SignUpPage() {
           </p>
         </div>
       </div>
+
+      <InstallPrompt />
     </div>
   )
 }
