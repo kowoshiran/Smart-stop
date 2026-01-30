@@ -34,14 +34,87 @@ export default function PresentationsTopicPage() {
 
       setProfile(profileData)
 
-      // Charger les posts (pour l'instant, pas de table forum_posts, on va en créer une simulation)
-      // En attendant la vraie base de données, on affiche un message vide
-      setPosts([])
+      // Charger les posts depuis Supabase
+      await loadPosts()
+
       setLoading(false)
     }
 
     loadData()
+
+    // S'abonner aux nouveaux posts en temps réel
+    const channel = supabase
+      .channel('forum_posts_presentations')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'forum_posts',
+          filter: 'topic_id=eq.presentations'
+        },
+        (payload) => {
+          // Charger les informations du profil pour le nouveau post
+          loadPostWithProfile(payload.new)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [router])
+
+  const loadPosts = async () => {
+    try {
+      const { data: postsData, error } = await supabase
+        .from('forum_posts')
+        .select('*')
+        .eq('topic_id', 'presentations')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      // Charger les profils pour tous les posts
+      const userIds = [...new Set(postsData.map(post => post.user_id))]
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, first_name')
+        .in('id', userIds)
+
+      // Mapper les posts avec les noms des utilisateurs
+      const postsWithNames = postsData.map(post => {
+        const userProfile = profilesData?.find(p => p.id === post.user_id)
+        return {
+          ...post,
+          user_name: userProfile?.first_name || 'Anonyme'
+        }
+      })
+
+      setPosts(postsWithNames)
+    } catch (error) {
+      console.error('Erreur lors du chargement des posts:', error)
+    }
+  }
+
+  const loadPostWithProfile = async (post) => {
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('first_name')
+        .eq('id', post.user_id)
+        .single()
+
+      const postWithName = {
+        ...post,
+        user_name: profileData?.first_name || 'Anonyme'
+      }
+
+      setPosts(prevPosts => [postWithName, ...prevPosts])
+    } catch (error) {
+      console.error('Erreur lors du chargement du profil:', error)
+    }
+  }
 
   const handlePostSubmit = async (e) => {
     e.preventDefault()
@@ -50,20 +123,30 @@ export default function PresentationsTopicPage() {
     setPosting(true)
 
     try {
-      // Pour l'instant, on va juste ajouter localement
-      // Plus tard, il faudra créer une table forum_posts dans Supabase
-      const newPostData = {
-        id: Date.now(),
-        user_id: user.id,
-        user_name: profile?.first_name || 'Anonyme',
-        content: newPost,
-        created_at: new Date().toISOString(),
+      // Sauvegarder dans Supabase
+      const { data, error } = await supabase
+        .from('forum_posts')
+        .insert({
+          topic_id: 'presentations',
+          user_id: user.id,
+          content: newPost.trim()
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Ajouter le post localement avec le nom de l'utilisateur
+      const postWithName = {
+        ...data,
+        user_name: profile?.first_name || 'Anonyme'
       }
 
-      setPosts([newPostData, ...posts])
+      setPosts([postWithName, ...posts])
       setNewPost('')
     } catch (error) {
       console.error('Erreur lors de la publication:', error)
+      alert('Erreur lors de la publication du message. Réessaye.')
     } finally {
       setPosting(false)
     }
