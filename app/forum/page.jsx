@@ -70,8 +70,8 @@ export default function ForumPage() {
   const [loading, setLoading] = useState(true)
   const [posts, setPosts] = useState([])
   const [selectedCategory, setSelectedCategory] = useState(null) // null = vue catégories, sinon = vue discussions
+  const [selectedPost, setSelectedPost] = useState(null) // null = liste titres, sinon = post ouvert
   const [showNewPostForm, setShowNewPostForm] = useState(false)
-  const [expandedPost, setExpandedPost] = useState(null)
   const [comments, setComments] = useState({})
   const [newComment, setNewComment] = useState('')
 
@@ -207,7 +207,7 @@ export default function ForumPage() {
 
   const handleLike = async (postId) => {
     try {
-      const post = posts.find(p => p.id === postId)
+      const post = selectedPost || posts.find(p => p.id === postId)
 
       if (post.isLiked) {
         // Retirer le like
@@ -227,28 +227,32 @@ export default function ForumPage() {
       }
 
       await loadData()
+
+      // Si on est sur la vue d'un post, mettre à jour selectedPost aussi
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost({
+          ...selectedPost,
+          isLiked: !post.isLiked,
+          likes_count: post.isLiked ? selectedPost.likes_count - 1 : selectedPost.likes_count + 1
+        })
+      }
     } catch (error) {
       console.error('Erreur:', error)
       alert('❌ Erreur lors du like')
     }
   }
 
-  const handleExpandPost = async (postId) => {
-    if (expandedPost === postId) {
-      setExpandedPost(null)
-      return
-    }
-
-    setExpandedPost(postId)
+  const handleOpenPost = async (post) => {
+    setSelectedPost(post)
 
     try {
       const { data: commentsData } = await supabase
         .from('forum_comments')
         .select('*')
-        .eq('post_id', postId)
+        .eq('post_id', post.id)
         .order('created_at', { ascending: true })
 
-      setComments({ ...comments, [postId]: commentsData || [] })
+      setComments({ [post.id]: commentsData || [] })
     } catch (error) {
       console.error('Erreur:', error)
     }
@@ -270,8 +274,26 @@ export default function ForumPage() {
       if (error) throw error
 
       setNewComment('')
-      await handleExpandPost(postId)
+
+      // Recharger les commentaires
+      const { data: commentsData } = await supabase
+        .from('forum_comments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true })
+
+      setComments({ [postId]: commentsData || [] })
+
+      // Mettre à jour le compteur de commentaires
       await loadData()
+
+      // Si on est sur la vue d'un post, mettre à jour selectedPost aussi
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost({
+          ...selectedPost,
+          comments_count: selectedPost.comments_count + 1
+        })
+      }
     } catch (error) {
       console.error('Erreur:', error)
       alert('❌ Erreur lors de l\'ajout du commentaire')
@@ -368,8 +390,8 @@ export default function ForumPage() {
             </div>
           )}
 
-          {/* VUE DISCUSSIONS */}
-          {selectedCategory && (
+          {/* VUE LISTE DES TITRES */}
+          {selectedCategory && !selectedPost && (
             <>
               {/* Bouton retour + header catégorie */}
               <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-4 mb-6">
@@ -473,8 +495,8 @@ export default function ForumPage() {
                 </div>
               )}
 
-              {/* Liste des discussions */}
-              <div className="space-y-4">
+              {/* Liste des titres des discussions */}
+              <div className="space-y-3">
                 {posts.length === 0 ? (
                   <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
                     <div className="text-6xl mb-4">💬</div>
@@ -482,203 +504,194 @@ export default function ForumPage() {
                     <p className="text-purple-300">Sois le premier à partager ton expérience !</p>
                   </div>
                 ) : selectedCategory === 'journal' && Object.keys(journalsByUser).length > 0 ? (
-                  // Affichage groupé pour les journaux
+                  // Affichage groupé pour les journaux (liste de titres)
                   Object.entries(journalsByUser).map(([userId, userPosts]) => (
-                    <div key={userId} className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
-                      <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <div key={userId} className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-4 mb-3">
+                      <h3 className="text-md font-bold text-white mb-3 flex items-center gap-2">
                         📓 Journal de {userPosts[0].author_name}
                         <span className="text-sm font-normal text-purple-300">({userPosts.length} {userPosts.length > 1 ? 'entrées' : 'entrée'})</span>
                       </h3>
-                      <div className="space-y-3">
-                        {userPosts.map((post) => {
-                          const isExpanded = expandedPost === post.id
-                          const postComments = comments[post.id] || []
-
-                          return (
-                            <div key={post.id} className="bg-white/5 rounded-xl p-4 hover:bg-white/10 transition-all">
-                              {/* Date */}
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs text-purple-400">{formatDate(post.created_at)}</span>
-                                {post.mood && (
-                                  <span className="text-lg">{moodEmojis[post.mood]?.emoji || '😐'}</span>
-                                )}
-                              </div>
-
-                              {/* Titre */}
-                              {post.title && (
-                                <h4 className="text-md font-semibold text-white mb-2">{post.title}</h4>
-                              )}
-
-                              {/* Contenu */}
-                              <p className="text-purple-200 text-sm mb-3 whitespace-pre-wrap line-clamp-3">{post.content}</p>
-
-                              {/* Tags */}
-                              {post.tags && post.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mb-3">
-                                  {post.tags.map((tag, idx) => (
-                                    <span key={idx} className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 text-xs">
-                                      {tag}
-                                    </span>
-                                  ))}
+                      <div className="space-y-2">
+                        {userPosts.map((post) => (
+                          <button
+                            key={post.id}
+                            onClick={() => handleOpenPost(post)}
+                            className="w-full text-left bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-all group"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-white group-hover:text-cyan-400 transition mb-1 truncate">
+                                  {post.title}
+                                </h4>
+                                <div className="flex items-center gap-2 text-xs text-purple-400">
+                                  <span>{formatDate(post.created_at)}</span>
+                                  {post.mood && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{moodEmojis[post.mood]?.emoji || '😐'}</span>
+                                    </>
+                                  )}
                                 </div>
-                              )}
-
-                              {/* Actions */}
-                              <div className="flex items-center gap-3">
-                                <button
-                                  onClick={() => handleLike(post.id)}
-                                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-sm transition-all ${
-                                    post.isLiked
-                                      ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
-                                      : 'bg-white/10 text-purple-200 hover:bg-white/20'
-                                  }`}
-                                >
-                                  <span className="text-xs">{post.isLiked ? '❤️' : '🤍'}</span>
-                                  <span className="text-xs">{post.likes_count}</span>
-                                </button>
-
-                                <button
-                                  onClick={() => handleExpandPost(post.id)}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 text-purple-200 hover:bg-white/20 transition-all text-sm"
-                                >
-                                  <span className="text-xs">💬</span>
-                                  <span className="text-xs">{post.comments_count}</span>
-                                </button>
                               </div>
-
-                              {/* Commentaires */}
-                              {isExpanded && (
-                                <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
-                                  {postComments.map((comment) => (
-                                    <div key={comment.id} className="bg-white/5 rounded-lg p-3">
-                                      <div className="flex items-start justify-between mb-1">
-                                        <span className="text-xs font-semibold text-purple-200">{comment.author_name}</span>
-                                        <span className="text-xs text-purple-400">{formatDate(comment.created_at)}</span>
-                                      </div>
-                                      <p className="text-xs text-white whitespace-pre-wrap">{comment.content}</p>
-                                    </div>
-                                  ))}
-
-                                  <div className="flex gap-2">
-                                    <input
-                                      type="text"
-                                      value={newComment}
-                                      onChange={(e) => setNewComment(e.target.value)}
-                                      placeholder="Ajoute un commentaire..."
-                                      className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder-purple-300/50 focus:outline-none focus:border-cyan-500 transition"
-                                      onKeyPress={(e) => {
-                                        if (e.key === 'Enter') {
-                                          handleAddComment(post.id)
-                                        }
-                                      }}
-                                    />
-                                    <button
-                                      onClick={() => handleAddComment(post.id)}
-                                      className="px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-500 text-white hover:from-purple-600 hover:to-cyan-600 transition-all text-sm"
-                                    >
-                                      ➤
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
+                              <div className="flex items-center gap-2 text-xs text-purple-300 shrink-0">
+                                <span className="flex items-center gap-1">
+                                  {post.isLiked ? '❤️' : '🤍'} {post.likes_count}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  💬 {post.comments_count}
+                                </span>
+                              </div>
                             </div>
-                          )
-                        })}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   ))
                 ) : (
-                  // Affichage normal pour les autres catégories
-                  posts.map((post) => {
-                    const isExpanded = expandedPost === post.id
-                    const postComments = comments[post.id] || []
-
-                    return (
-                      <div
-                        key={post.id}
-                        className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all"
-                      >
-                        {/* Header */}
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="text-lg font-bold text-white mb-1">{post.title}</h3>
-                            <div className="flex items-center gap-2 text-xs text-purple-400">
-                              <span>{post.author_name}</span>
-                              <span>•</span>
-                              <span>{formatDate(post.created_at)}</span>
-                            </div>
+                  // Liste de titres pour les autres catégories
+                  posts.map((post) => (
+                    <button
+                      key={post.id}
+                      onClick={() => handleOpenPost(post)}
+                      className="w-full text-left backdrop-blur-xl bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-4 transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition mb-2 truncate">
+                            {post.title}
+                          </h3>
+                          <div className="flex items-center gap-2 text-xs text-purple-400">
+                            <span>{post.author_name}</span>
+                            <span>•</span>
+                            <span>{formatDate(post.created_at)}</span>
                           </div>
                         </div>
-
-                        {/* Contenu */}
-                        <p className="text-purple-200 mb-4 whitespace-pre-wrap">{post.content}</p>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleLike(post.id)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
-                              post.isLiked
-                                ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
-                                : 'bg-white/10 text-purple-200 hover:bg-white/20'
-                            }`}
-                          >
-                            <span>{post.isLiked ? '❤️' : '🤍'}</span>
-                            <span className="text-sm">{post.likes_count}</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleExpandPost(post.id)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-purple-200 hover:bg-white/20 transition-all"
-                          >
-                            <span>💬</span>
-                            <span className="text-sm">{post.comments_count}</span>
-                          </button>
+                        <div className="flex items-center gap-3 text-sm text-purple-300 shrink-0">
+                          <span className="flex items-center gap-1">
+                            {post.isLiked ? '❤️' : '🤍'} {post.likes_count}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            💬 {post.comments_count}
+                          </span>
                         </div>
-
-                        {/* Commentaires */}
-                        {isExpanded && (
-                          <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
-                            {postComments.length === 0 ? (
-                              <p className="text-sm text-purple-400 text-center py-2">Aucun commentaire pour le moment</p>
-                            ) : (
-                              postComments.map((comment) => (
-                                <div key={comment.id} className="bg-white/5 rounded-lg p-3">
-                                  <div className="flex items-start justify-between mb-1">
-                                    <span className="text-sm font-semibold text-purple-200">{comment.author_name}</span>
-                                    <span className="text-xs text-purple-400">{formatDate(comment.created_at)}</span>
-                                  </div>
-                                  <p className="text-sm text-white whitespace-pre-wrap">{comment.content}</p>
-                                </div>
-                              ))
-                            )}
-
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={newComment}
-                                onChange={(e) => setNewComment(e.target.value)}
-                                placeholder="Ajoute un commentaire..."
-                                className="flex-1 px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-purple-300/50 focus:outline-none focus:border-cyan-500 transition"
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleAddComment(post.id)
-                                  }
-                                }}
-                              />
-                              <button
-                                onClick={() => handleAddComment(post.id)}
-                                className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-500 text-white hover:from-purple-600 hover:to-cyan-600 transition-all"
-                              >
-                                ➤
-                              </button>
-                            </div>
-                          </div>
-                        )}
                       </div>
-                    )
-                  })
+                    </button>
+                  ))
                 )}
+              </div>
+            </>
+          )}
+
+          {/* VUE POST COMPLET */}
+          {selectedPost && (
+            <>
+              {/* Bouton retour */}
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-4 mb-6">
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="flex items-center gap-2 text-purple-300 hover:text-white transition"
+                >
+                  ← Retour aux discussions
+                </button>
+              </div>
+
+              {/* Post complet */}
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+                {/* Header */}
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold text-white mb-3">{selectedPost.title}</h2>
+                  <div className="flex items-center gap-2 text-sm text-purple-400">
+                    <span>{selectedPost.author_name}</span>
+                    <span>•</span>
+                    <span>{formatDate(selectedPost.created_at)}</span>
+                    {selectedPost.mood && (
+                      <>
+                        <span>•</span>
+                        <span>{moodEmojis[selectedPost.mood]?.emoji || '😐'} {moodEmojis[selectedPost.mood]?.label || 'Neutre'}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Contenu */}
+                <p className="text-purple-200 mb-6 whitespace-pre-wrap leading-relaxed">{selectedPost.content}</p>
+
+                {/* Tags */}
+                {selectedPost.tags && selectedPost.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {selectedPost.tags.map((tag, idx) => (
+                      <span key={idx} className="px-3 py-1 rounded-lg bg-purple-500/20 text-purple-300 text-sm">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center gap-3 pt-4 border-t border-white/10">
+                  <button
+                    onClick={() => handleLike(selectedPost.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                      selectedPost.isLiked
+                        ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
+                        : 'bg-white/10 text-purple-200 hover:bg-white/20'
+                    }`}
+                  >
+                    <span>{selectedPost.isLiked ? '❤️' : '🤍'}</span>
+                    <span className="text-sm font-semibold">{selectedPost.likes_count}</span>
+                  </button>
+
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-purple-200">
+                    <span>💬</span>
+                    <span className="text-sm font-semibold">{selectedPost.comments_count}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section commentaires */}
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
+                <h3 className="text-lg font-bold text-white mb-4">
+                  💬 Commentaires {comments[selectedPost.id]?.length > 0 && `(${comments[selectedPost.id].length})`}
+                </h3>
+
+                {/* Liste des commentaires */}
+                <div className="space-y-3 mb-4">
+                  {!comments[selectedPost.id] || comments[selectedPost.id].length === 0 ? (
+                    <p className="text-sm text-purple-400 text-center py-4">Aucun commentaire pour le moment</p>
+                  ) : (
+                    comments[selectedPost.id].map((comment) => (
+                      <div key={comment.id} className="bg-white/5 rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <span className="text-sm font-semibold text-purple-200">{comment.author_name}</span>
+                          <span className="text-xs text-purple-400">{formatDate(comment.created_at)}</span>
+                        </div>
+                        <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{comment.content}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Formulaire ajout commentaire */}
+                <div className="flex gap-2 pt-4 border-t border-white/10">
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Ajoute un commentaire..."
+                    className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-purple-300/50 focus:outline-none focus:border-cyan-500 transition"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddComment(selectedPost.id)
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => handleAddComment(selectedPost.id)}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-cyan-500 text-white hover:from-purple-600 hover:to-cyan-600 transition-all"
+                  >
+                    ➤
+                  </button>
+                </div>
               </div>
             </>
           )}
