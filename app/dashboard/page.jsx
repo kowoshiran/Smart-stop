@@ -1145,45 +1145,18 @@ export default function DashboardPage() {
 
           {/* Section Communauté */}
           <div className="mt-6 backdrop-blur-xl bg-gradient-to-br from-purple-600/30 to-pink-600/30 border border-purple-500/40 rounded-[18px] p-6 shadow-[0_4px_24px_rgba(168,85,247,0.15)]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2 tracking-tight">
-                <span>👥</span>
-                Communauté Smart Stop
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Partages aujourd'hui */}
-              <div className="bg-white/10 border border-white/20 rounded-xl p-4">
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl">🤝</div>
-                  <div>
-                    <div className="text-2xl font-bold text-white">
-                      {Math.floor(Math.random() * 30) + 15}
-                    </div>
-                    <div className="text-purple-300 text-xs">Partages aujourd'hui</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Utilisateurs actifs */}
-              <div className="bg-white/10 border border-white/20 rounded-xl p-4">
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl">⭐</div>
-                  <div>
-                    <div className="text-2xl font-bold text-white">
-                      {Math.floor(Math.random() * 100) + 50}
-                    </div>
-                    <div className="text-purple-300 text-xs">Utilisateurs actifs</div>
-                  </div>
-                </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-4xl">👥</div>
+              <div>
+                <h2 className="text-lg font-bold text-white tracking-tight">Communauté Smart Stop</h2>
+                <p className="text-purple-200 text-sm">Rejoins d'autres personnes qui arrêtent comme toi</p>
               </div>
             </div>
 
-            {/* Bouton Voir la communauté */}
+            {/* Bouton Rejoindre la communauté */}
             <Link
               href="/community"
-              className="mt-4 w-full bg-gradient-to-r from-purple-600/50 to-pink-600/50 border border-purple-500/50 rounded-[16px] p-3 text-center text-white font-medium hover:from-purple-600/70 hover:to-pink-600/70 shadow-[0_4px_16px_rgba(217,70,239,0.2)] hover:shadow-[0_6px_24px_rgba(217,70,239,0.35)] transition-all duration-300 flex items-center justify-center gap-2 group"
+              className="w-full bg-gradient-to-r from-purple-600/50 to-pink-600/50 border border-purple-500/50 rounded-[16px] p-4 text-center text-white font-semibold hover:from-purple-600/70 hover:to-pink-600/70 shadow-[0_4px_16px_rgba(217,70,239,0.2)] hover:shadow-[0_6px_24px_rgba(217,70,239,0.35)] transition-all duration-300 flex items-center justify-center gap-2 group"
             >
               Rejoindre la communauté
               <span className="group-hover:translate-x-1 transition-transform">→</span>
