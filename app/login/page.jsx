@@ -24,7 +24,16 @@ export default function LoginPage() {
         password,
       })
 
-      if (error) throw error
+      if (error) {
+        // Traduire les erreurs courantes en français
+        const errorMessages = {
+          'Invalid login credentials': 'Email ou mot de passe incorrect',
+          'Email not confirmed': 'Email non confirmé. Vérifie ta boîte mail et clique sur le lien de confirmation.',
+          'Invalid email': 'Adresse email invalide',
+          'User not found': 'Utilisateur non trouvé',
+        }
+        throw new Error(errorMessages[error.message] || error.message)
+      }
 
       router.push('/dashboard')
 

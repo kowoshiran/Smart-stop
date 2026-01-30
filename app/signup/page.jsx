@@ -10,6 +10,7 @@ export default function SignUpPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [message, setMessage] = useState(null)
@@ -20,6 +21,13 @@ export default function SignUpPage() {
     setError(null)
     setMessage(null)
 
+    // Vérifier que les mots de passe correspondent
+    if (password !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas')
+      setLoading(false)
+      return
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -29,7 +37,16 @@ export default function SignUpPage() {
         }
       })
 
-      if (error) throw error
+      if (error) {
+        // Traduire les erreurs courantes en français
+        const errorMessages = {
+          'User already registered': 'Cet email est déjà utilisé',
+          'Invalid email': 'Adresse email invalide',
+          'Password should be at least 6 characters': 'Le mot de passe doit contenir au moins 6 caractères',
+          'Email not confirmed': 'Email non confirmé. Vérifie ta boîte mail.',
+        }
+        throw new Error(errorMessages[error.message] || error.message)
+      }
 
       // Créer le profil dans la table profiles
       if (data.user) {
@@ -107,6 +124,22 @@ export default function SignUpPage() {
               placeholder="••••••••"
             />
             <p className="text-xs text-purple-300/70 mt-1">Minimum 6 caractères</p>
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-purple-200 mb-2">
+              Confirmer le mot de passe
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={6}
+              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-purple-300/50 focus:outline-none focus:border-cyan-500 transition"
+              placeholder="••••••••"
+            />
           </div>
 
           {error && (
