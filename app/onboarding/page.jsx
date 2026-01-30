@@ -217,6 +217,37 @@ export default function OnboardingPage() {
         throw error
       }
 
+      // Créer une entrée initiale dans daily_entries avec la baseline
+      // pour que le graphique ait un point de départ
+      const today = new Date().toISOString().split('T')[0]
+      const initialEntry = {
+        user_id: user.id,
+        entry_date: today,
+        tracking_type: formData.quitType === 'vape' ? 'vape' : 'cigarettes',
+        cigarettes_count: (formData.quitType === 'cigarettes' || formData.quitType === 'both')
+          ? formData.cigarettesPerDay
+          : 0,
+        vape_puffs: (formData.quitType === 'vape' || formData.quitType === 'both')
+          ? (formData.vapeFrequency === 'heavy' ? 300 : formData.vapeFrequency === 'moderate' ? 200 : 100)
+          : 0,
+        mood: 'neutral',
+        energy_level: 3,
+        triggers: [],
+        money_saved: 0,
+        meditation_minutes: 0,
+        physical_activity_minutes: 0,
+        updated_at: new Date().toISOString(),
+      }
+
+      const { error: entryError } = await supabase
+        .from('daily_entries')
+        .upsert(initialEntry, { onConflict: 'user_id,entry_date' })
+
+      if (entryError) {
+        console.error('Erreur lors de la création de l\'entrée initiale:', entryError)
+        // On ne bloque pas l'onboarding si l'entrée initiale échoue
+      }
+
       // Redirection vers le dashboard
       router.push('/dashboard')
     } catch (error) {
