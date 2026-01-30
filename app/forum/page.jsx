@@ -47,6 +47,7 @@ function StarField() {
 }
 
 const categories = {
+  presentation: { label: 'Présentation', emoji: '👋', color: 'from-purple-500 to-pink-500', description: 'Présente-toi à la communauté' },
   victory: { label: 'Victoires', emoji: '🎉', color: 'from-emerald-500 to-cyan-500', description: 'Partage tes réussites et célèbre tes victoires' },
   challenge: { label: 'Challenges', emoji: '💪', color: 'from-orange-500 to-red-500', description: 'Les difficultés et défis du sevrage' },
   advice: { label: 'Conseils', emoji: '💡', color: 'from-yellow-500 to-orange-500', description: 'Astuces et conseils pratiques' },
